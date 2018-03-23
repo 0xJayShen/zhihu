@@ -1,12 +1,14 @@
 pragma solidity ^0.4.19;
 import "./Ownable.sol";
-
+import 'node_modules/zeppelin-solidity/math/SafeMath.sol';
 contract Generals is Ownable{
     
+    using SafeMath for uint256;
+
     event NewGeneral(uint GeneralId,
     string name, 
     uint age, 
-    uint fighting_force,
+    uint8 fighting_force,
     uint level,
     uint win_count,
     uint loss_count,
@@ -16,14 +18,17 @@ contract Generals is Ownable{
 
     struct General {
         string name;
-        uint age;
-        uint  fighting_force;//战斗力
-        uint level ;
-        uint win_count;
-        uint loss_count;
-        uint XP;
+        uint8 age;
+        uint8  fighting_force;//战斗力
+        uint16 level ;
+        uint8 win_count;
+        uint8 loss_count;
+        uint8 XP;
         //之后可以加一些别的武将属性
+        uint32 readyTime;
     }
+
+    uint cooldownTime = 1 days;
 
     General[] public generals;
     //垃圾语言毁我青春,判断数字在数组的功能都没有,以下是我最初的想法
@@ -37,7 +42,7 @@ contract Generals is Ownable{
         //也可以看我的知乎文章:https://zhuanlan.zhihu.com/p/34313807 
         uint _fighting_force = uint8(block.blockhash(block.number-1))%10;
 
-        uint id = generals.push(General(_name,_age,_fighting_force,0,0,0,0)) - 1;//push返回的是长度,我们用来当数组的索引
+        uint id = generals.push(General(_name,_age,_fighting_force,0,0,0,0,uint32(now + cooldownTime))) - 1;//push返回的是长度,我们用来当数组的索引
 
         GeneralOwner[id] = msg.sender;
         GeneralOwnerCount[msg.sender]++;
@@ -49,7 +54,7 @@ contract Generals is Ownable{
     function createFreeGeneral(string _name,uint _age)  onlyOwner external{
         uint _fighting_force = uint8(block.blockhash(block.number-1))%10;
 
-        uint id = generals.push(General(_name,_age,_fighting_force,0,0,0,0)) - 1;//push返回的是长度,我们用来当数组的索引
+        uint id = generals.push(General(_name,_age,_fighting_force,0,0,0,0,uint32(now + cooldownTime))) - 1;//push返回的是长度,我们用来当数组的索引
 
         GeneralOwner[id] = owner;
 
@@ -59,11 +64,11 @@ contract Generals is Ownable{
     }
 
     //找个函数问题很大,每次都要遍历所有武将,是因为之前改写了判断数字是否在数组的原因,找机会再改过来
-    function getGeneral(address _owner) public returns(uint[]) {
+    function getGeneral(address _owner) external view returns(uint[]) {
         //memory 别急,找个时间认真讲
       uint[] memory result = new uint[](GeneralOwnerCount[_owner]);//同长度数组
       uint counter = 0;
-    for (uint i = 0; i < generals.length; i++) {
+      for (uint i = 0; i < generals.length; i++) {
       if (GeneralOwner[i] == _owner) {
         result[counter] = i;
         //索引对应武将 id

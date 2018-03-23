@@ -13,19 +13,27 @@ contract FightHunt is Generals {
         _;
     }
 
-    function changelevel(uint _id)  isXP(_id) internal  {
+    function _changelevel(uint _id)  isXP(_id) internal  {
         require(msg.sender == GeneralOwner[_id]);
         generals[_id].level++;
         generals[_id].XP = 0;
     }
 
-    function fight(address to_add,uint from_id,uint to_id) public {
+    function _hunterCooldown(uint _id) internal {
+        GeneralOwner[_id].readyTime = uint(now + cooldownTime);
+    }
+
+    modifier is_ready(uint from_id){
+        require(GeneralOwner[from_id].readyTime <= now);
+    }
+
+    function fight(address to_add,uint from_id,uint to_id) is_ready(from_id) public {
         require(GeneralOwner[from_id] == msg.sender);
         require(GeneralOwner[to_id] == to_add);
         if ((generals[from_id].fighting_force -  generals[to_id].fighting_force)*random >= 40){
                 generals[from_id].XP++;
                 generals[from_id].win_count++;
-                changelevel(from_id);
+                _changelevel(from_id);
 
                 generals[to_id].loss_count++;
 
@@ -36,7 +44,7 @@ contract FightHunt is Generals {
         }else{
                 generals[to_id].XP++;
                 generals[to_id].win_count++;
-                changelevel(to_id);
+                _changelevel(to_id);
 
                 generals[from_id].loss_count++;
 
@@ -44,19 +52,21 @@ contract FightHunt is Generals {
                 GeneralOwnerCount[to_add]++;
                 GeneralOwnerCount[msg.sender]--;
         }
+        _hunterCooldown(from_id)
     }
     function hunt(uint from_id,uint to_id) public{
             require(GeneralOwner[from_id] == msg.sender);
              if ((generals[from_id].fighting_force -  generals[to_id].fighting_force)*random >= 50){
                 generals[from_id].XP++;
                 generals[from_id].win_count++;
-                changelevel(from_id);
+                _changelevel(from_id);
 
                 GeneralOwner[to_id] = owner;
              }else{
                 generals[from_id].level--;
                 generals[from_id].loss_count++;
              }
+             _hunterCooldown(from_id)
         } 
     
     
